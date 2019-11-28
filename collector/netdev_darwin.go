@@ -25,12 +25,10 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-func getNetDevStats(f *netDevFilter) (netDevStats, error) {
-	netDev := netDevStats{}
-
+func getNetDevStats(stats netDevStats, f *netDevFilter) error {
 	ifs, err := net.Interfaces()
 	if err != nil {
-		return nil, fmt.Errorf("net.Interfaces() failed: %w", err)
+		return fmt.Errorf("net.Interfaces() failed: %w", err)
 	}
 
 	for _, iface := range ifs {
@@ -45,19 +43,17 @@ func getNetDevStats(f *netDevFilter) (netDevStats, error) {
 			continue
 		}
 
-		netDev[iface.Name] = map[string]float64{
-			"receive_packets":    float64(ifaceData.Data.Ipackets),
-			"transmit_packets":   float64(ifaceData.Data.Opackets),
-			"receive_errs":       float64(ifaceData.Data.Ierrors),
-			"transmit_errs":      float64(ifaceData.Data.Oerrors),
-			"receive_bytes":      float64(ifaceData.Data.Ibytes),
-			"transmit_bytes":     float64(ifaceData.Data.Obytes),
-			"receive_multicast":  float64(ifaceData.Data.Imcasts),
-			"transmit_multicast": float64(ifaceData.Data.Omcasts),
-		}
+		stats.add(iface.Name, "receive_packets", float64(ifaceData.Data.Ipackets))
+		stats.add(iface.Name, "transmit_packets", float64(ifaceData.Data.Opackets))
+		stats.add(iface.Name, "receive_errs", float64(ifaceData.Data.Ierrors))
+		stats.add(iface.Name, "transmit_errs", float64(ifaceData.Data.Oerrors))
+		stats.add(iface.Name, "receive_bytes", float64(ifaceData.Data.Ibytes))
+		stats.add(iface.Name, "transmit_bytes", float64(ifaceData.Data.Obytes))
+		stats.add(iface.Name, "receive_multicast", float64(ifaceData.Data.Imcasts))
+		stats.add(iface.Name, "transmit_multicast", float64(ifaceData.Data.Omcasts))
 	}
 
-	return netDev, nil
+	return nil
 }
 
 func getIfaceData(index int) (*ifMsghdr2, error) {

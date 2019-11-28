@@ -19,6 +19,7 @@ package collector
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -34,8 +35,6 @@ type netDevCollector struct {
 	filter      netDevFilter
 	metricDescs map[string]*prometheus.Desc
 }
-
-type netDevStats map[string]map[string]float64
 
 func init() {
 	registerCollector("netdev", defaultEnabled, NewNetDevCollector)
@@ -55,15 +54,25 @@ func NewNetDevCollector() (Collector, error) {
 }
 
 func (c *netDevCollector) Update(ch chan<- prometheus.Metric) error {
-	netDev, err := getNetDevStats(&c.filter)
+	wg := sync.WaitGroup{}
+	metrics := make(chan netDevMetric, 64)
+
+	wg.Add(1)
+	go func() {
+		for metric := range metrics {
+			ch <- prometheus.MustNewConstMetric(c.getDesc(metric.key), prometheus.CounterValue, metric.value, metric.dev)
+		}
+		wg.Done()
+	}()
+
+	err := getNetDevStats(metrics, &c.filter)
+	close(metrics)
+	wg.Wait()
+
 	if err != nil {
 		return fmt.Errorf("couldn't get netstats: %s", err)
 	}
-	for dev, devStats := range netDev {
-		for key, value := range devStats {
-			ch <- prometheus.MustNewConstMetric(c.getDesc(key), prometheus.CounterValue, value, dev)
-		}
-	}
+
 	return nil
 }
 

@@ -29,12 +29,10 @@ import (
 */
 import "C"
 
-func getNetDevStats(f *netDevFilter) (netDevStats, error) {
-	netDev := netDevStats{}
-
+func getNetDevStats(stats netDevStats, f *netDevFilter) error {
 	var ifap, ifa *C.struct_ifaddrs
 	if C.getifaddrs(&ifap) == -1 {
-		return nil, errors.New("getifaddrs() failed")
+		return errors.New("getifaddrs() failed")
 	}
 	defer C.freeifaddrs(ifap)
 
@@ -48,19 +46,17 @@ func getNetDevStats(f *netDevFilter) (netDevStats, error) {
 
 			data := (*C.struct_if_data)(ifa.ifa_data)
 
-			netDev[dev] = map[string]float64{
-				"receive_packets":    float64(data.ifi_ipackets),
-				"transmit_packets":   float64(data.ifi_opackets),
-				"receive_errs":       float64(data.ifi_ierrors),
-				"transmit_errs":      float64(data.ifi_oerrors),
-				"receive_bytes":      float64(data.ifi_ibytes),
-				"transmit_bytes":     float64(data.ifi_obytes),
-				"receive_multicast":  float64(data.ifi_imcasts),
-				"transmit_multicast": float64(data.ifi_omcasts),
-				"receive_drop":       float64(data.ifi_iqdrops),
-			}
+			stats.add(dev, "receive_packets", float64(data.ifi_ipackets))
+			stats.add(dev, "transmit_packets", float64(data.ifi_opackets))
+			stats.add(dev, "receive_errs", float64(data.ifi_ierrors))
+			stats.add(dev, "transmit_errs", float64(data.ifi_oerrors))
+			stats.add(dev, "receive_bytes", float64(data.ifi_ibytes))
+			stats.add(dev, "transmit_bytes", float64(data.ifi_obytes))
+			stats.add(dev, "receive_multicast", float64(data.ifi_imcasts))
+			stats.add(dev, "transmit_multicast", float64(data.ifi_omcasts))
+			stats.add(dev, "receive_drop", float64(data.ifi_iqdrops))
 		}
 	}
 
-	return netDev, nil
+	return nil
 }

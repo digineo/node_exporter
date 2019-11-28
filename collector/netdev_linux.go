@@ -21,7 +21,6 @@ import (
 	"io"
 	"os"
 	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/prometheus/common/log"
@@ -32,36 +31,35 @@ var (
 	procNetDevFieldSep    = regexp.MustCompile(` +`)
 )
 
-func getNetDevStats(f *netDevFilter) (netDevStats, error) {
+func getNetDevStats(stats netDevStats, f *netDevFilter) error {
+
 	file, err := os.Open(procFilePath("net/dev"))
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer file.Close()
 
-	return parseNetDevStats(file, f)
+	return parseNetDevStats(stats, file, f)
 }
 
-func parseNetDevStats(r io.Reader, f *netDevFilter) (netDevStats, error) {
+func parseNetDevStats(stats netDevStats, r io.Reader, f *netDevFilter) error {
 	scanner := bufio.NewScanner(r)
 	scanner.Scan() // skip first header
 	scanner.Scan()
 	parts := strings.Split(scanner.Text(), "|")
 	if len(parts) != 3 { // interface + receive + transmit
-		return nil, fmt.Errorf("invalid header line in net/dev: %s",
-			scanner.Text())
+		return fmt.Errorf("invalid header line in net/dev: %s", scanner.Text())
 	}
 
 	receiveHeader := strings.Fields(parts[1])
 	transmitHeader := strings.Fields(parts[2])
 	headerLength := len(receiveHeader) + len(transmitHeader)
 
-	netDev := netDevStats{}
 	for scanner.Scan() {
 		line := strings.TrimLeft(scanner.Text(), " ")
 		parts := procNetDevInterfaceRE.FindStringSubmatch(line)
 		if len(parts) != 3 {
-			return nil, fmt.Errorf("couldn't get interface name, invalid line in net/dev: %q", line)
+			return fmt.Errorf("couldn't get interface name, invalid line in net/dev: %q", line)
 		}
 
 		dev := parts[1]
@@ -72,29 +70,16 @@ func parseNetDevStats(r io.Reader, f *netDevFilter) (netDevStats, error) {
 
 		values := procNetDevFieldSep.Split(strings.TrimLeft(parts[2], " "), -1)
 		if len(values) != headerLength {
-			return nil, fmt.Errorf("couldn't get values, invalid line in net/dev: %q", parts[2])
-		}
-
-		devStats := map[string]float64{}
-		addStats := func(key, value string) {
-			v, err := strconv.ParseFloat(value, 64)
-			if err != nil {
-				log.Errorf("invalid value %s in netstats for %s: %v", value, key, err)
-				return
-			}
-
-			devStats[key] = v
+			return fmt.Errorf("couldn't get values, invalid line in net/dev: %q", parts[2])
 		}
 
 		for i := 0; i < len(receiveHeader); i++ {
-			addStats("receive_"+receiveHeader[i], values[i])
+			stats.addString(dev, "receive_"+receiveHeader[i], values[i])
 		}
 
 		for i := 0; i < len(transmitHeader); i++ {
-			addStats("transmit_"+transmitHeader[i], values[i+len(receiveHeader)])
+			stats.addString(dev, "transmit_"+transmitHeader[i], values[i+len(receiveHeader)])
 		}
-
-		netDev[dev] = devStats
 	}
-	return netDev, scanner.Err()
+	return scanner.Err()
 }
