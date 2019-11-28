@@ -36,18 +36,18 @@ func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (map[string]ma
 	}
 
 	for _, iface := range ifs {
-		ifaceData, err := getIfaceData(iface.Index)
-		if err != nil {
-			log.Debugf("failed to load data for interface %q: %v", iface.Name, err)
-			continue
-		}
-
 		if ignore != nil && ignore.MatchString(iface.Name) {
 			log.Debugf("Ignoring device: %s", iface.Name)
 			continue
 		}
 		if accept != nil && !accept.MatchString(iface.Name) {
 			log.Debugf("Ignoring device: %s", iface.Name)
+			continue
+		}
+
+		ifaceData, err := getIfaceData(iface.Index)
+		if err != nil {
+			log.Debugf("failed to load data for interface %q: %v", iface.Name, err)
 			continue
 		}
 
