@@ -21,6 +21,7 @@ import (
 	"io"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/prometheus/common/log"
@@ -31,7 +32,7 @@ var (
 	procNetDevFieldSep    = regexp.MustCompile(` +`)
 )
 
-func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (map[string]map[string]string, error) {
+func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, error) {
 	file, err := os.Open(procFilePath("net/dev"))
 	if err != nil {
 		return nil, err
@@ -41,7 +42,7 @@ func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (map[string]ma
 	return parseNetDevStats(file, ignore, accept)
 }
 
-func parseNetDevStats(r io.Reader, ignore *regexp.Regexp, accept *regexp.Regexp) (map[string]map[string]string, error) {
+func parseNetDevStats(r io.Reader, ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, error) {
 	scanner := bufio.NewScanner(r)
 	scanner.Scan() // skip first header
 	scanner.Scan()
@@ -55,7 +56,7 @@ func parseNetDevStats(r io.Reader, ignore *regexp.Regexp, accept *regexp.Regexp)
 	transmitHeader := strings.Fields(parts[2])
 	headerLength := len(receiveHeader) + len(transmitHeader)
 
-	netDev := map[string]map[string]string{}
+	netDev := netDevStats{}
 	for scanner.Scan() {
 		line := strings.TrimLeft(scanner.Text(), " ")
 		parts := procNetDevInterfaceRE.FindStringSubmatch(line)
@@ -78,14 +79,26 @@ func parseNetDevStats(r io.Reader, ignore *regexp.Regexp, accept *regexp.Regexp)
 			return nil, fmt.Errorf("couldn't get values, invalid line in net/dev: %q", parts[2])
 		}
 
-		netDev[dev] = map[string]string{}
+		devStats := map[string]uint64{}
+		addStats := func(key, value string) {
+			v, err := strconv.ParseUint(value, 0, 64)
+			if err != nil {
+				log.Errorf("invalid value %s in netstats for %s: %v", value, key, err)
+				return
+			}
+
+			devStats[key] = v
+		}
+
 		for i := 0; i < len(receiveHeader); i++ {
-			netDev[dev]["receive_"+receiveHeader[i]] = values[i]
+			addStats("receive_"+receiveHeader[i], values[i])
 		}
 
 		for i := 0; i < len(transmitHeader); i++ {
-			netDev[dev]["transmit_"+transmitHeader[i]] = values[i+len(receiveHeader)]
+			addStats("transmit_"+transmitHeader[i], values[i+len(receiveHeader)])
 		}
+
+		netDev[dev] = devStats
 	}
 	return netDev, scanner.Err()
 }
