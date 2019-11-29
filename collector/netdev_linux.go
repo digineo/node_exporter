@@ -79,9 +79,9 @@ func parseNetDevStats(r io.Reader, ignore *regexp.Regexp, accept *regexp.Regexp)
 			return nil, fmt.Errorf("couldn't get values, invalid line in net/dev: %q", parts[2])
 		}
 
-		devStats := map[string]uint64{}
+		devStats := map[string]float64{}
 		addStats := func(key, value string) {
-			v, err := strconv.ParseUint(value, 0, 64)
+			v, err := strconv.ParseFloat(value, 64)
 			if err != nil {
 				log.Errorf("invalid value %s in netstats for %s: %v", value, key, err)
 				return
