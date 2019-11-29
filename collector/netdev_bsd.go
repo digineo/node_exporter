@@ -60,17 +60,17 @@ func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp, logger log.Log
 
 		data := (*C.struct_if_data)(ifa.ifa_data)
 
-		netDev[dev] = map[string]uint64{
-			"receive_packets":    uint64(data.ifi_ipackets),
-			"transmit_packets":   uint64(data.ifi_opackets),
-			"receive_errs":       uint64(data.ifi_ierrors),
-			"transmit_errs":      uint64(data.ifi_oerrors),
-			"receive_bytes":      uint64(data.ifi_ibytes),
-			"transmit_bytes":     uint64(data.ifi_obytes),
-			"receive_multicast":  uint64(data.ifi_imcasts),
-			"transmit_multicast": uint64(data.ifi_omcasts),
-			"receive_drop":       uint64(data.ifi_iqdrops),
-			"transmit_drop":      uint64(data.ifi_oqdrops),
+		netDev[dev] = map[string]float64{
+			"receive_packets":    float64(data.ifi_ipackets),
+			"transmit_packets":   float64(data.ifi_opackets),
+			"receive_errs":       float64(data.ifi_ierrors),
+			"transmit_errs":      float64(data.ifi_oerrors),
+			"receive_bytes":      float64(data.ifi_ibytes),
+			"transmit_bytes":     float64(data.ifi_obytes),
+			"receive_multicast":  float64(data.ifi_imcasts),
+			"transmit_multicast": float64(data.ifi_omcasts),
+			"receive_drop":       float64(data.ifi_iqdrops),
+			"transmit_drop":      float64(data.ifi_oqdrops),
 		}
 	}
 

@@ -51,15 +51,15 @@ func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp, logger log.Log
 			continue
 		}
 
-		netDev[iface.Name] = map[string]uint64{
-			"receive_packets":    ifaceData.Data.Ipackets,
-			"transmit_packets":   ifaceData.Data.Opackets,
-			"receive_errs":       ifaceData.Data.Ierrors,
-			"transmit_errs":      ifaceData.Data.Oerrors,
-			"receive_bytes":      ifaceData.Data.Ibytes,
-			"transmit_bytes":     ifaceData.Data.Obytes,
-			"receive_multicast":  ifaceData.Data.Imcasts,
-			"transmit_multicast": ifaceData.Data.Omcasts,
+		netDev[iface.Name] = map[string]float64{
+			"receive_packets":    float64(ifaceData.Data.Ipackets),
+			"transmit_packets":   float64(ifaceData.Data.Opackets),
+			"receive_errs":       float64(ifaceData.Data.Ierrors),
+			"transmit_errs":      float64(ifaceData.Data.Oerrors),
+			"receive_bytes":      float64(ifaceData.Data.Ibytes),
+			"transmit_bytes":     float64(ifaceData.Data.Obytes),
+			"receive_multicast":  float64(ifaceData.Data.Imcasts),
+			"transmit_multicast": float64(ifaceData.Data.Omcasts),
 		}
 	}
 

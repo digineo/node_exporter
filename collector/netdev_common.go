@@ -39,7 +39,7 @@ type netDevCollector struct {
 	logger                log.Logger
 }
 
-type netDevStats map[string]map[string]uint64
+type netDevStats map[string]map[string]float64
 
 func init() {
 	registerCollector("netdev", defaultEnabled, NewNetDevCollector)
@@ -87,7 +87,7 @@ func (c *netDevCollector) Update(ch chan<- prometheus.Metric) error {
 				)
 				c.metricDescs[key] = desc
 			}
-			ch <- prometheus.MustNewConstMetric(desc, prometheus.CounterValue, float64(value), dev)
+			ch <- prometheus.MustNewConstMetric(desc, prometheus.CounterValue, value, dev)
 		}
 	}
 	return nil
