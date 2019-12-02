@@ -77,18 +77,24 @@ func (c *netDevCollector) Update(ch chan<- prometheus.Metric) error {
 	}
 	for dev, devStats := range netDev {
 		for key, value := range devStats {
-			desc, ok := c.metricDescs[key]
-			if !ok {
-				desc = prometheus.NewDesc(
-					prometheus.BuildFQName(namespace, c.subsystem, key+"_total"),
-					fmt.Sprintf("Network device statistic %s.", key),
-					[]string{"device"},
-					nil,
-				)
-				c.metricDescs[key] = desc
-			}
-			ch <- prometheus.MustNewConstMetric(desc, prometheus.CounterValue, value, dev)
+			ch <- prometheus.MustNewConstMetric(c.getDesc(key), prometheus.CounterValue, value, dev)
 		}
 	}
 	return nil
+}
+
+// getDesc builds and returns the description for a device metric
+func (c *netDevCollector) getDesc(name string) *prometheus.Desc {
+	desc, ok := c.metricDescs[name]
+	if !ok {
+		desc = prometheus.NewDesc(
+			prometheus.BuildFQName(namespace, c.subsystem, name+"_total"),
+			fmt.Sprintf("Network device statistic %s.", name),
+			[]string{"device"},
+			nil,
+		)
+		c.metricDescs[name] = desc
+	}
+
+	return desc
 }
