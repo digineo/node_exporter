@@ -37,25 +37,27 @@ func getNetDevStats(stats netDevStats, f *netDevFilter) error {
 	defer C.freeifaddrs(ifap)
 
 	for ifa = ifap; ifa != nil; ifa = ifa.ifa_next {
-		if ifa.ifa_addr.sa_family == C.AF_LINK {
-			dev := C.GoString(ifa.ifa_name)
-			if f.ignored(dev) {
-				log.Debugf("Ignoring device: %s", dev)
-				continue
-			}
-
-			data := (*C.struct_if_data)(ifa.ifa_data)
-
-			stats.add(dev, "receive_packets", float64(data.ifi_ipackets))
-			stats.add(dev, "transmit_packets", float64(data.ifi_opackets))
-			stats.add(dev, "receive_errs", float64(data.ifi_ierrors))
-			stats.add(dev, "transmit_errs", float64(data.ifi_oerrors))
-			stats.add(dev, "receive_bytes", float64(data.ifi_ibytes))
-			stats.add(dev, "transmit_bytes", float64(data.ifi_obytes))
-			stats.add(dev, "receive_multicast", float64(data.ifi_imcasts))
-			stats.add(dev, "transmit_multicast", float64(data.ifi_omcasts))
-			stats.add(dev, "receive_drop", float64(data.ifi_iqdrops))
+		if ifa.ifa_addr.sa_family != C.AF_LINK {
+			continue
 		}
+
+		dev := C.GoString(ifa.ifa_name)
+		if f.ignored(dev) {
+			log.Debugf("Ignoring device: %s", dev)
+			continue
+		}
+
+		data := (*C.struct_if_data)(ifa.ifa_data)
+
+		stats.add(dev, "receive_packets", float64(data.ifi_ipackets))
+		stats.add(dev, "transmit_packets", float64(data.ifi_opackets))
+		stats.add(dev, "receive_errs", float64(data.ifi_ierrors))
+		stats.add(dev, "transmit_errs", float64(data.ifi_oerrors))
+		stats.add(dev, "receive_bytes", float64(data.ifi_ibytes))
+		stats.add(dev, "transmit_bytes", float64(data.ifi_obytes))
+		stats.add(dev, "receive_multicast", float64(data.ifi_imcasts))
+		stats.add(dev, "transmit_multicast", float64(data.ifi_omcasts))
+		stats.add(dev, "receive_drop", float64(data.ifi_iqdrops))
 	}
 
 	return nil
