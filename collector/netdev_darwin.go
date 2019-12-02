@@ -20,13 +20,12 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
-	"regexp"
 
 	"github.com/prometheus/common/log"
 	"golang.org/x/sys/unix"
 )
 
-func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, error) {
+func getNetDevStats(f *netDevFilter) (netDevStats, error) {
 	netDev := netDevStats{}
 
 	ifs, err := net.Interfaces()
@@ -35,11 +34,7 @@ func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, 
 	}
 
 	for _, iface := range ifs {
-		if ignore != nil && ignore.MatchString(iface.Name) {
-			log.Debugf("Ignoring device: %s", iface.Name)
-			continue
-		}
-		if accept != nil && !accept.MatchString(iface.Name) {
+		if f.ignored(iface.Name) {
 			log.Debugf("Ignoring device: %s", iface.Name)
 			continue
 		}

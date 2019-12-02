@@ -32,17 +32,17 @@ var (
 	procNetDevFieldSep    = regexp.MustCompile(` +`)
 )
 
-func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, error) {
+func getNetDevStats(f *netDevFilter) (netDevStats, error) {
 	file, err := os.Open(procFilePath("net/dev"))
 	if err != nil {
 		return nil, err
 	}
 	defer file.Close()
 
-	return parseNetDevStats(file, ignore, accept)
+	return parseNetDevStats(file, f)
 }
 
-func parseNetDevStats(r io.Reader, ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, error) {
+func parseNetDevStats(r io.Reader, f *netDevFilter) (netDevStats, error) {
 	scanner := bufio.NewScanner(r)
 	scanner.Scan() // skip first header
 	scanner.Scan()
@@ -65,11 +65,7 @@ func parseNetDevStats(r io.Reader, ignore *regexp.Regexp, accept *regexp.Regexp)
 		}
 
 		dev := parts[1]
-		if ignore != nil && ignore.MatchString(dev) {
-			log.Debugf("Ignoring device: %s", dev)
-			continue
-		}
-		if accept != nil && !accept.MatchString(dev) {
+		if f.ignored(dev) {
 			log.Debugf("Ignoring device: %s", dev)
 			continue
 		}

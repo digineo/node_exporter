@@ -18,7 +18,6 @@ package collector
 
 import (
 	"errors"
-	"regexp"
 
 	"github.com/prometheus/common/log"
 )
@@ -33,7 +32,7 @@ import (
 */
 import "C"
 
-func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, error) {
+func getNetDevStats(f *netDevFilter) (netDevStats, error) {
 	netDev := netDevStats{}
 
 	var ifap, ifa *C.struct_ifaddrs
@@ -48,11 +47,7 @@ func getNetDevStats(ignore *regexp.Regexp, accept *regexp.Regexp) (netDevStats, 
 		}
 
 		dev := C.GoString(ifa.ifa_name)
-		if ignore != nil && ignore.MatchString(dev) {
-			log.Debugf("Ignoring device: %s", dev)
-			continue
-		}
-		if accept != nil && !accept.MatchString(dev) {
+		if f.ignored(dev) {
 			log.Debugf("Ignoring device: %s", dev)
 			continue
 		}
